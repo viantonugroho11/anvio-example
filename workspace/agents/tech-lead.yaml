@@ -1,0 +1,27 @@
+# Agent: tech-lead
+# Source: source-repo/profiles/tech-lead.json
+# Default entry point per Hermes planner (complexity >= 0.3 starts at tech-lead).
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: tech-lead
+  version: "1.0.0"
+spec:
+  name: Tech Lead
+  description: Tech lead — planning, estimation, delegation
+  persona: tech-lead
+  soul: tech-lead-soul
+  runtime: local
+  skills:
+    - engineering-orchestration
+    - roadmap-planning
+    - project-estimation
+    - risk-analysis
+    - system-design
+    - feature-development
+    - memory-maintenance
+    - semantic-memory
+  tools:
+    include: ['*']
+  maxTurns: 50
+  reasoningEffort: high

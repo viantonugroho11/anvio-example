@@ -1,0 +1,29 @@
+# Agent: devops
+# Source: source-repo/profiles/devops.json
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: devops
+  version: "1.0.0"
+spec:
+  name: DevOps
+  description: DevOps — infrastructure, CI/CD, observability
+  persona: devops
+  soul: devops-soul
+  runtime: local             # only agent with docker access via harness policy
+  skills:
+    - kubernetes-deployment
+    - helm-generator
+    - terraform
+    - observability-stack
+    - prometheus-metrics
+    - grafana-dashboard
+    - opentelemetry
+    - security-hardening
+    - disaster-recovery
+    - incident-response
+    - repo-standards
+  tools:
+    include: ['*']
+  maxTurns: 60
+  reasoningEffort: medium

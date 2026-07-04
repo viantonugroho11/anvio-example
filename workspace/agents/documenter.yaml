@@ -1,0 +1,26 @@
+# Agent: documenter
+# Source: source-repo/profiles/documenter.json
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: documenter
+  version: "1.0.0"
+spec:
+  name: Documenter
+  description: Technical writer — docs, API refs, changelogs
+  persona: documenter
+  soul: documenter-soul
+  runtime: local
+  skills:
+    - api-documentation
+    - technical-writing
+    - architecture-documentation
+    - changelog-generation
+    - openapi-generator
+  tools:
+    include:
+      - file:*
+      - mcp:*
+      - todo:*
+  maxTurns: 40
+  reasoningEffort: low

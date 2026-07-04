@@ -1,0 +1,25 @@
+# Agent: reviewer
+# Source: source-repo/profiles/reviewer.json
+# Note: reviewer is the required quality gate for code_change / deploy actions.
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: reviewer
+  version: "1.0.0"
+spec:
+  name: Reviewer
+  description: Gatekeeper — code, security, performance review
+  persona: reviewer
+  soul: reviewer-soul
+  runtime: local             # delegates code review to Cursor via /cursor-code-review
+  skills:
+    - cursor-delegate
+    - cursor-code-review
+    - code-review
+    - architecture-review
+    - security-review
+    - performance-review
+  tools:
+    include: ['*']
+  maxTurns: 50
+  reasoningEffort: high

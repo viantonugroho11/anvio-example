@@ -1,0 +1,33 @@
+# Agent: architect
+# Source: source-repo/profiles/architect.json
+# Binds soul + persona + skills + runtime for execution.
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: architect
+  version: "1.0.0"
+spec:
+  name: Architect
+  description: System architect — design, ADRs, scalability and reliability analysis
+  persona: architect
+  soul: architect-soul
+  runtime: local             # overridable to `cursor` when delegating implementation
+  skills:
+    - system-design
+    - architecture-review
+    - event-storming
+    - distributed-systems
+    - architecture-decision-record
+    - performance-modeling
+    - reliability-engineering
+    - clean-architecture
+    - ddd
+    - event-driven-design
+    - api-design
+    - semantic-memory
+  # Toolsets from Hermes (`file`, `web`, `skills`, `mcp`, `todo`) map to Anvio's
+  # default built-in tool gateway plus MCP. No explicit include list = full surface.
+  tools:
+    include: ['*']
+  maxTurns: 60
+  reasoningEffort: high

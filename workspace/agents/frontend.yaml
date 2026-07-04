@@ -1,0 +1,29 @@
+# Agent: frontend
+# Source: source-repo/profiles/frontend.json
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: frontend
+  version: "1.0.0"
+spec:
+  name: Frontend
+  description: Frontend engineer — UI, components, accessibility
+  persona: frontend
+  soul: frontend-soul
+  runtime: local
+  skills:
+    - cursor-delegate
+    - cursor-coding
+    - react-architecture
+    - nextjs
+    - design-system
+    - accessibility
+    - frontend-performance
+    - api-integration
+    - testing-strategy
+    - tdd
+    - repo-conventions
+  tools:
+    include: ['*']
+  maxTurns: 70
+  reasoningEffort: medium

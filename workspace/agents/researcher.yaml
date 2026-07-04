@@ -1,0 +1,24 @@
+# Agent: researcher
+# Source: source-repo/profiles/researcher.json
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: researcher
+  version: "1.0.0"
+spec:
+  name: Researcher
+  description: Research — feasibility and tech evaluation (read-only)
+  persona: researcher
+  soul: researcher-soul
+  runtime: local
+  skills:
+    - technical-research
+    - feasibility-analysis
+  # Read-only surface — no MCP write tools, no terminal
+  tools:
+    include:
+      - web:*
+      - file:read
+      - todo:*
+  maxTurns: 30
+  reasoningEffort: high

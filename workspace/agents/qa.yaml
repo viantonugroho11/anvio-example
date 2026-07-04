@@ -1,0 +1,24 @@
+# Agent: qa
+# Source: source-repo/profiles/qa.json
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: qa
+  version: "1.0.0"
+spec:
+  name: QA
+  description: QA — test design, automation, validation
+  persona: qa
+  soul: qa-soul
+  runtime: local
+  skills:
+    - test-design
+    - automation-testing
+    - integration-testing
+    - performance-testing
+    - tdd
+    - feature-development
+  tools:
+    include: ['*']
+  maxTurns: 60
+  reasoningEffort: medium

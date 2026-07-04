@@ -1,0 +1,35 @@
+# Agent: backend
+# Source: source-repo/profiles/backend.json
+apiVersion: anvio.io/v1
+kind: Agent
+metadata:
+  slug: backend
+  version: "1.0.0"
+spec:
+  name: Backend
+  description: Backend engineer — APIs, business logic, data layer
+  persona: backend
+  soul: backend-soul
+  runtime: local             # delegates code writing to Cursor via /cursor-coding
+  skills:
+    - cursor-delegate
+    - cursor-coding
+    - golang-microservice
+    - postgres-optimization
+    - redis-patterns
+    - kafka-consumer
+    - event-driven-design
+    - api-design
+    - security-review
+    - performance-review
+    - testing-strategy
+    - clean-architecture
+    - ddd
+    - bitbucket-cli
+    - bitbucket-pr-workflow
+    - repo-conventions
+    - semantic-memory
+  tools:
+    include: ['*']
+  maxTurns: 80
+  reasoningEffort: medium
