@@ -1,0 +1,29 @@
+# External reference clones — not part of this repo
+/source-repo/
+/anvio-docs/
+
+# Local secrets and env
+.env
+.env.local
+*.env
+!*.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Anvio workspace runtime state
+/workspace/sessions/
+/workspace/state.db
+/workspace/inbox/
+/workspace/souls/_cache/
+/workspace/skills/_drafts/
+/workspace/skills/_installed/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
