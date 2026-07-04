@@ -1,0 +1,28 @@
+# Model provider routing — replaces configs/config.yaml `model:` block.
+# ADR-007: use the built-in `deepseek` provider rather than `custom` + base_url.
+apiVersion: anvio.io/v1
+kind: ProviderRouting
+metadata:
+  name: default
+spec:
+  default:
+    provider: deepseek
+    model: deepseek-chat
+    temperature: 0.3
+    topP: 0.9
+    frequencyPenalty: 0.1
+  # Per-task routing hints (optional; matches Hermes reasoning_effort per profile).
+  # Anvio's ModelRouter reads these; individual agents can still override.
+  taskRouting:
+    coding:
+      provider: deepseek
+      model: deepseek-chat
+    reasoning:
+      provider: deepseek
+      model: deepseek-reasoner
+    summarization:
+      provider: deepseek
+      model: deepseek-chat
+  fallbacks:
+    - provider: openrouter    # only used if DEEPSEEK_API_KEY unset or transient error
+      model: deepseek/deepseek-chat

@@ -1,0 +1,45 @@
+# Anvio Workspace — Hermes Engineering Platform (migrated)
+# Source of truth for global runtime config. Replaces configs/config.yaml.
+apiVersion: anvio.io/v1
+kind: Workspace
+metadata:
+  name: hermes-engineering-platform
+  version: "1.0.0"
+spec:
+  auth:
+    enabled: false
+  storage:
+    provider: sqlite         # Hermes preserved session history; SQLite gives FTS5 message search
+    basePath: .
+  memory:
+    provider: filesystem     # SoT lives in workspace/memory/ Markdown; ADR-005 covers vector indexing
+    basePath: memory
+    fts: true
+  events:
+    provider: local          # single-process default; switch to nats for Level-3
+  runtime:
+    default: local           # DeepSeek chat via local runtime; agents may override to `cursor`
+  execution:
+    defaultTimeoutMs: 180000 # matches Hermes terminal.timeout: 180
+    networkEnabled: false
+  credentials:
+    encryption: enabled
+  channels:
+    telegram:
+      enabled: true          # env: TELEGRAM_BOT_TOKEN
+      defaultAgent: tech-lead
+    slack:
+      enabled: true          # Native Socket Mode adapter — replaces Python Playwright bridge
+      defaultAgent: tech-lead
+    cli:
+      enabled: true
+    rest:
+      enabled: true
+    web-chat:
+      enabled: true
+  worktrees:
+    enabled: true            # cursor delegation clones Bitbucket repos under ../projects
+    repoPath: ../projects
+  defaultAgent: tech-lead    # Hermes's planner starts from tech-lead for complexity >= 0.3
+  defaultSoul: tech-lead-soul
+  defaultUserId: local-user

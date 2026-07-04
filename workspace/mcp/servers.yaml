@@ -1,0 +1,129 @@
+# MCP servers — replaces configs/mcp/mcp-servers.yaml + configs/config.yaml `mcp_servers:` block.
+# Env placeholders resolve from process.env at connection time.
+apiVersion: anvio.io/v1
+kind: McpConfig
+metadata:
+  name: default
+spec:
+  firstCallApproval: true    # every distinct tool needs approval once per session
+  servers:
+    filesystem:
+      command: npx
+      args: ['-y', '@modelcontextprotocol/server-filesystem', '/workspace']
+      transport: stdio
+      enabled: true
+
+    atlassian:
+      command: npx
+      args: ['-y', 'mcp-atlassian']
+      transport: stdio
+      enabled: true
+      env:
+        ATLASSIAN_EMAIL: ${ATLASSIAN_EMAIL}
+        ATLASSIAN_API_TOKEN: ${ATLASSIAN_API_TOKEN}
+        ATLASSIAN_BASE_URL: ${ATLASSIAN_BASE_URL}
+
+    # Bitbucket — one MCP instance per repo, mirroring Hermes multi-URL setup.
+    # Every server uses the same shared allowedTools filter.
+    bitbucket:
+      command: npx
+      args: ['-y', 'mcp-bitbucket']
+      transport: stdio
+      enabled: true
+      env:
+        BITBUCKET_USERNAME: ${BITBUCKET_USERNAME}
+        BITBUCKET_PASSWORD: ${BITBUCKET_APP_PASSWORD}
+        BITBUCKET_URL: ${BITBUCKET_URL}
+      allowedTools:
+        - list_pull_requests
+        - get_pr_details
+        - add_pr_comment
+        - add_pr_inline_comment
+        - view_pr_comments
+        - list_pipelines
+
+    bitbucket-order-tyche:
+      command: npx
+      args: ['-y', 'mcp-bitbucket']
+      transport: stdio
+      enabled: true
+      env:
+        BITBUCKET_USERNAME: ${BITBUCKET_USERNAME}
+        BITBUCKET_PASSWORD: ${BITBUCKET_APP_PASSWORD}
+        BITBUCKET_URL: ${BITBUCKET_URL_2}
+      allowedTools:
+        - list_pull_requests
+        - get_pr_details
+        - add_pr_comment
+        - add_pr_inline_comment
+        - view_pr_comments
+        - list_pipelines
+
+    bitbucket-repo-3:
+      command: npx
+      args: ['-y', 'mcp-bitbucket']
+      transport: stdio
+      enabled: false          # disabled until BITBUCKET_URL_3 is set
+      env:
+        BITBUCKET_USERNAME: ${BITBUCKET_USERNAME}
+        BITBUCKET_PASSWORD: ${BITBUCKET_APP_PASSWORD}
+        BITBUCKET_URL: ${BITBUCKET_URL_3}
+      allowedTools:
+        - list_pull_requests
+        - get_pr_details
+        - add_pr_comment
+        - add_pr_inline_comment
+        - view_pr_comments
+        - list_pipelines
+
+    bitbucket-repo-4:
+      command: npx
+      args: ['-y', 'mcp-bitbucket']
+      transport: stdio
+      enabled: false
+      env:
+        BITBUCKET_USERNAME: ${BITBUCKET_USERNAME}
+        BITBUCKET_PASSWORD: ${BITBUCKET_APP_PASSWORD}
+        BITBUCKET_URL: ${BITBUCKET_URL_4}
+      allowedTools:
+        - list_pull_requests
+        - get_pr_details
+        - add_pr_comment
+        - add_pr_inline_comment
+        - view_pr_comments
+        - list_pipelines
+
+    bitbucket-repo-5:
+      command: npx
+      args: ['-y', 'mcp-bitbucket']
+      transport: stdio
+      enabled: false
+      env:
+        BITBUCKET_USERNAME: ${BITBUCKET_USERNAME}
+        BITBUCKET_PASSWORD: ${BITBUCKET_APP_PASSWORD}
+        BITBUCKET_URL: ${BITBUCKET_URL_5}
+      allowedTools:
+        - list_pull_requests
+        - get_pr_details
+        - add_pr_comment
+        - add_pr_inline_comment
+        - view_pr_comments
+        - list_pipelines
+
+    github:
+      command: npx
+      args: ['-y', '@modelcontextprotocol/server-github']
+      transport: stdio
+      enabled: true
+      env:
+        GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN}
+
+    # PGVector memory — ADR-005. In Phase 5 this is replaced by Anvio's built-in
+    # memory provider; kept here as an MCP tool for read-only queries in the meantime.
+    hermes-memory:
+      command: npx
+      args: ['-y', '@modelcontextprotocol/server-postgres', '${MEMORY_DATABASE_URL}']
+      transport: stdio
+      enabled: true
+      env:
+        MEMORY_DATABASE_URL: ${MEMORY_DATABASE_URL}
