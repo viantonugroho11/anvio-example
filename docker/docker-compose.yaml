@@ -1,0 +1,682 @@
+services:
+  # Ollama service — local LLM hosting
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    # ports:
+    #   - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # Pre-pull models on startup
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-pull
+    depends_on:
+      - ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Ollama...' &&
+      until curl -s http://ollama:11434/api/tags > /dev/null 2>&1; do sleep 2; done &&
+      echo 'Pulling qwen3-coder...' && ollama pull qwen3-coder &&
+      echo 'Pulling deepseek-r1...' && ollama pull deepseek-r1 &&
+      echo 'All models pulled.'
+      "
+
+  hermes-gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-engineering-gateway
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+      - "8644:8644"
+    depends_on:
+      ollama:
+        condition: service_started
+    volumes:
+      - hermes-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+    environment:
+      - HERMES_PROFILE=default
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: architect
+  hermes-architect:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-architect
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - architect-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+    environment:
+      - HERMES_PROFILE=architect
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_ARCHITECT}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: backend (dedicated bot: TELEGRAM_BOT_BE)
+  hermes-backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-backend
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - backend-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+      - ../scripts/cursor-delegate:/opt/cursor-delegate
+      - ${WORKSPACE_HOST_PATH:-../projects}:/workspace
+      - ${SSH_HOST_PATH:-./mounts/ssh-stub}:/mnt/host-ssh:ro
+    environment:
+      - HERMES_PROFILE=backend
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_BE}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+      - WORKSPACE_PATH=${WORKSPACE_PATH:-/workspace}
+      - HERMES_SSH_DIR=/opt/data/.ssh
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: frontend (dedicated bot: TELEGRAM_BOT_FE)
+  hermes-frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-frontend
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - frontend-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+      - ../scripts/cursor-delegate:/opt/cursor-delegate
+      - ${WORKSPACE_HOST_PATH:-../projects}:/workspace
+      - ${SSH_HOST_PATH:-./mounts/ssh-stub}:/mnt/host-ssh:ro
+    environment:
+      - HERMES_PROFILE=frontend
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_FE}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+      - WORKSPACE_PATH=${WORKSPACE_PATH:-/workspace}
+      - HERMES_SSH_DIR=/opt/data/.ssh
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: devops
+  hermes-devops:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-devops
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - devops-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - HERMES_PROFILE=devops
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_DEVOPS}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: qa
+  hermes-qa:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-qa
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - qa-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+    environment:
+      - HERMES_PROFILE=qa
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_QA}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: researcher
+  hermes-researcher:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-researcher
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - researcher-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+    environment:
+      - HERMES_PROFILE=researcher
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_RESEARCHER}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: documenter
+  hermes-documenter:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-documenter
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - documenter-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+    environment:
+      - HERMES_PROFILE=documenter
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_DOCUMENTER}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: reviewer
+  hermes-reviewer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-reviewer
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - reviewer-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+      - ../scripts/cursor-delegate:/opt/cursor-delegate
+      - ${WORKSPACE_HOST_PATH:-../projects}:/workspace
+      - ${SSH_HOST_PATH:-./mounts/ssh-stub}:/mnt/host-ssh:ro
+    environment:
+      - HERMES_PROFILE=reviewer
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_REVIEWER}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+      - WORKSPACE_PATH=${WORKSPACE_PATH:-/workspace}
+      - HERMES_SSH_DIR=/opt/data/.ssh
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+  # Engineering profile: tech-lead
+  hermes-tech-lead:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: hermes-engineering:latest
+    container_name: hermes-tech-lead
+    restart: unless-stopped
+    profiles:
+      - engineering
+    volumes:
+      - tech-lead-home:/home/hermes/.hermes
+      - ../configs/config.docker.yaml:/opt/hermes/config.template.yaml:ro
+      - ../skills:/home/hermes/.hermes/skills
+      - ../scripts/sync-profile-skills.sh:/opt/hermes/sync-profile-skills.sh:ro
+      - ../scripts/inject-profile-env.sh:/opt/hermes/inject-profile-env.sh:ro
+      - ../scripts/bitbucket-clone.sh:/opt/hermes/bitbucket-clone.sh:ro
+      - ../scripts/bitbucket-pr-info.mjs:/opt/hermes/bitbucket-pr-info.mjs:ro
+      - ../scripts/setup-host-ssh.sh:/opt/hermes/setup-host-ssh.sh:ro
+      - ../scripts/bitbucket-git-env.sh:/opt/hermes/bitbucket-git-env.sh:ro
+      - ../scripts/cursor-bitbucket-review.sh:/opt/hermes/cursor-bitbucket-review.sh:ro
+    environment:
+      - HERMES_PROFILE=tech-lead
+      - HERMES_GATEWAY_NO_SUPERVISE=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TECH_LEAD}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHATSAPP_ENABLED=${WHATSAPP_ENABLED}
+      - WHATSAPP_MODE=${WHATSAPP_MODE}
+      - WHATSAPP_ALLOWED_USERS=${WHATSAPP_ALLOWED_USERS}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_BASE_URL=${ATLASSIAN_BASE_URL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      - BITBUCKET_WORKSPACE=${BITBUCKET_WORKSPACE}
+      - BITBUCKET_REPOS=${BITBUCKET_REPOS}
+      - BITBUCKET_URL=${BITBUCKET_URL}
+      - BITBUCKET_URL_2=${BITBUCKET_URL_2}
+      - BITBUCKET_URL_3=${BITBUCKET_URL_3}
+      - BITBUCKET_URL_4=${BITBUCKET_URL_4}
+      - BITBUCKET_URL_5=${BITBUCKET_URL_5}
+      - BITBUCKET_USERNAME=${BITBUCKET_USERNAME}
+      - BITBUCKET_APP_PASSWORD=${BITBUCKET_APP_PASSWORD}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - CURSOR_API_KEY=${CURSOR_API_KEY}
+      - CURSOR_DELEGATE_SCRIPT=${CURSOR_DELEGATE_SCRIPT:-/opt/cursor-delegate/delegate.mjs}
+    command: >
+      sh -c "
+      cp /opt/hermes/config.template.yaml /opt/data/config.yaml;
+      hermes profile create $$HERMES_PROFILE --clone 2>/dev/null ||
+      hermes profile create $$HERMES_PROFILE 2>/dev/null || true;
+      sh /opt/hermes/inject-profile-env.sh;
+      sh /opt/hermes/setup-host-ssh.sh;
+      sh /opt/hermes/sync-profile-skills.sh;
+      exec sh /opt/hermes/docker-gateway-start.sh
+      "
+
+volumes:
+  ollama-data:
+  hermes-home:
+  architect-home:
+  backend-home:
+  frontend-home:
+  devops-home:
+  qa-home:
+  researcher-home:
+  documenter-home:
+  reviewer-home:
+  tech-lead-home:

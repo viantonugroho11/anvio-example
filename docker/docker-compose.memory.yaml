@@ -1,0 +1,45 @@
+services:
+  postgres-memory:
+    image: pgvector/pgvector:pg16
+    container_name: hermes-postgres-memory
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hermes
+      POSTGRES_PASSWORD: ${MEMORY_DB_PASSWORD:-hermes_memory_dev}
+      POSTGRES_DB: hermes_memory
+    volumes:
+      - postgres-memory-data:/var/lib/postgresql/data
+      - ../configs/memory/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "${MEMORY_DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hermes -d hermes_memory"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  memory-indexer:
+    image: python:3.12-slim
+    container_name: hermes-memory-indexer
+    depends_on:
+      postgres-memory:
+        condition: service_healthy
+    volumes:
+      - ..:/workspace:ro
+    working_dir: /workspace
+    environment:
+      MEMORY_DATABASE_URL: postgresql://hermes:${MEMORY_DB_PASSWORD:-hermes_memory_dev}@postgres-memory:5432/hermes_memory
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      HERMES_TEAM_ID: ${HERMES_TEAM_ID:-default}
+      HERMES_REPO_ID: ${HERMES_REPO_ID:-hermes-engineering-platform}
+    entrypoint: >
+      sh -c "
+      pip install -q -r scripts/requirements-memory.txt &&
+      python scripts/index_memory.py
+      "
+    restart: "no"
+
+volumes:
+  postgres-memory-data:

@@ -1,0 +1,70 @@
+services:
+  hermes-gateway:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-gateway
+
+  hermes-architect:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-architect
+
+  hermes-backend:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-backend
+
+  hermes-frontend:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-frontend
+
+  hermes-devops:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-devops
+
+  hermes-qa:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-qa
+
+  hermes-researcher:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-researcher
+
+  hermes-documenter:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-documenter
+
+  hermes-reviewer:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-reviewer
+
+  hermes-tech-lead:
+    env_file:
+      - path: telemetry.env
+        required: false
+    environment:
+      - OTEL_SERVICE_NAME=hermes-tech-lead
