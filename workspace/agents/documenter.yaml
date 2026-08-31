@@ -3,24 +3,38 @@
 apiVersion: anvio.io/v1
 kind: Agent
 metadata:
-  slug: documenter
+  name: documenter
   version: "1.0.0"
 spec:
-  name: Documenter
+  # display name: Documenter
   description: Technical writer — docs, API refs, changelogs
   persona: documenter
   soul: documenter-soul
-  runtime: local
+  runtime:
+    provider: claude-code   # ADR-009: Claude Pro/Max OAuth via `anvio setup-token --claude`
+    fallbacks: [local]        # model provider (routing.yaml) used only on the `local` hop
   skills:
     - api-documentation
     - technical-writing
     - architecture-documentation
     - changelog-generation
     - openapi-generator
+  # Documentation surface — read/search + todo + skill invocation (no terminal, no HTTP writes)
   tools:
-    include:
-      - file:*
-      - mcp:*
-      - todo:*
-  maxTurns: 40
-  reasoningEffort: low
+    - anvio_tools__file_read
+    - anvio_tools__glob_files
+    - anvio_tools__grep_search
+    - anvio_tools__search_files
+    - anvio_tools__list_dir
+    - anvio_tools__path_exists
+    - anvio_tools__memory_recall
+    - anvio_tools__todo
+    - anvio_tools__skills_list
+    - anvio_tools__skill_view
+    - anvio_tools__skill_call
+  model:
+    # ClaudeCodeRuntime passes spec.model.model straight to the Claude Agent SDK,
+    # so this MUST be a Claude model id/alias — not the DeepSeek fallback model.
+    provider: anthropic
+    model: sonnet
+    maxTokens: 8192

@@ -4,14 +4,16 @@
 apiVersion: anvio.io/v1
 kind: Agent
 metadata:
-  slug: tech-lead
+  name: tech-lead
   version: "1.0.0"
 spec:
-  name: Tech Lead
+  # display name: Tech Lead
   description: Tech lead — planning, estimation, delegation
   persona: tech-lead
   soul: tech-lead-soul
-  runtime: local
+  runtime:
+    provider: claude-code   # ADR-009: Claude Pro/Max OAuth via `anvio setup-token --claude`
+    fallbacks: [local]        # model provider (routing.yaml) used only on the `local` hop
   skills:
     - engineering-orchestration
     - roadmap-planning
@@ -21,7 +23,10 @@ spec:
     - feature-development
     - memory-maintenance
     - semantic-memory
-  tools:
-    include: ['*']
-  maxTurns: 50
-  reasoningEffort: high
+  tools: []              # empty = full built-in gateway; list slugs to restrict
+  model:
+    # ClaudeCodeRuntime passes spec.model.model straight to the Claude Agent SDK,
+    # so this MUST be a Claude model id/alias — not the DeepSeek fallback model.
+    provider: anthropic
+    model: sonnet
+    maxTokens: 8192

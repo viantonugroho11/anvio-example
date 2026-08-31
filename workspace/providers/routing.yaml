@@ -5,6 +5,8 @@ kind: ProviderRouting
 metadata:
   name: default
 spec:
+  # NOTE: with `runtime.provider: claude-code` (ADR-009) the model provider below is only
+  # consulted on the `local` fallback hop — Claude Code runs on subscription OAuth, not an API key.
   default:
     provider: deepseek
     model: deepseek-chat
@@ -24,5 +26,7 @@ spec:
       provider: deepseek
       model: deepseek-chat
   fallbacks:
+    - provider: anthropic     # only if ANTHROPIC_API_KEY is set AND claude-code OAuth is unavailable
+      model: claude-sonnet-4-20250514
     - provider: openrouter    # only used if DEEPSEEK_API_KEY unset or transient error
       model: deepseek/deepseek-chat

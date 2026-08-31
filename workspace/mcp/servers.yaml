@@ -9,7 +9,7 @@ spec:
   servers:
     filesystem:
       command: npx
-      args: ['-y', '@modelcontextprotocol/server-filesystem', '/workspace']
+      args: ['-y', '@modelcontextprotocol/server-filesystem', '.']
       transport: stdio
       enabled: true
 
@@ -17,7 +17,7 @@ spec:
       command: npx
       args: ['-y', 'mcp-atlassian']
       transport: stdio
-      enabled: true
+      enabled: false         # needs jsdom + ATLASSIAN_* env; npx build is broken (ERR_MODULE_NOT_FOUND jsdom)
       env:
         ATLASSIAN_EMAIL: ${ATLASSIAN_EMAIL}
         ATLASSIAN_API_TOKEN: ${ATLASSIAN_API_TOKEN}
@@ -29,7 +29,7 @@ spec:
       command: npx
       args: ['-y', 'mcp-bitbucket']
       transport: stdio
-      enabled: true
+      enabled: false         # needs BITBUCKET_EMAIL / BITBUCKET_TOKEN — the ${VAR} placeholders are NOT expanded by Anvio
       env:
         BITBUCKET_USERNAME: ${BITBUCKET_USERNAME}
         BITBUCKET_PASSWORD: ${BITBUCKET_APP_PASSWORD}
@@ -46,7 +46,7 @@ spec:
       command: npx
       args: ['-y', 'mcp-bitbucket']
       transport: stdio
-      enabled: true
+      enabled: false         # needs BITBUCKET_EMAIL / BITBUCKET_TOKEN — ${VAR} placeholders are not expanded
       env:
         BITBUCKET_USERNAME: ${BITBUCKET_USERNAME}
         BITBUCKET_PASSWORD: ${BITBUCKET_APP_PASSWORD}
@@ -124,6 +124,6 @@ spec:
       command: npx
       args: ['-y', '@modelcontextprotocol/server-postgres', '${MEMORY_DATABASE_URL}']
       transport: stdio
-      enabled: true
+      enabled: false         # needs a literal MEMORY_DATABASE_URL — ${VAR} is passed through verbatim and fails URL parsing
       env:
         MEMORY_DATABASE_URL: ${MEMORY_DATABASE_URL}

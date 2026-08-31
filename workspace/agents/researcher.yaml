@@ -3,22 +3,32 @@
 apiVersion: anvio.io/v1
 kind: Agent
 metadata:
-  slug: researcher
+  name: researcher
   version: "1.0.0"
 spec:
-  name: Researcher
+  # display name: Researcher
   description: Research — feasibility and tech evaluation (read-only)
   persona: researcher
   soul: researcher-soul
-  runtime: local
+  runtime:
+    provider: claude-code   # ADR-009: Claude Pro/Max OAuth via `anvio setup-token --claude`
+    fallbacks: [local]        # model provider (routing.yaml) used only on the `local` hop
   skills:
     - technical-research
     - feasibility-analysis
   # Read-only surface — no MCP write tools, no terminal
   tools:
-    include:
-      - web:*
-      - file:read
-      - todo:*
-  maxTurns: 30
-  reasoningEffort: high
+    - anvio_tools__web_fetch
+    - anvio_tools__web_extract
+    - anvio_tools__file_read
+    - anvio_tools__glob_files
+    - anvio_tools__grep_search
+    - anvio_tools__list_dir
+    - anvio_tools__memory_recall
+    - anvio_tools__todo
+  model:
+    # ClaudeCodeRuntime passes spec.model.model straight to the Claude Agent SDK,
+    # so this MUST be a Claude model id/alias — not the DeepSeek fallback model.
+    provider: anthropic
+    model: sonnet
+    maxTokens: 8192

@@ -11,6 +11,7 @@ COMPOSE := docker compose -f $(COMPOSE_FILE)
 ANVIO_WORKSPACE ?= $(PWD)/workspace
 
 .PHONY: help init validate agents skills workflows chat run \
+	setup-token-claude auth-status gateway telegram \
 	memory-up memory-down memory-index memory-search \
 	observability-up observability-down telemetry-setup \
 	cursor-delegate-setup workspace-init workspace-clone workspace-clone-all
@@ -29,7 +30,35 @@ help:
 	@echo '  memory-up / memory-index / memory-search Q="…"'
 	@echo '  observability-up / -down    Langfuse + OTel + Grafana stack'
 	@echo ''
-	@echo 'Slack is handled by Anvio native channel (spec.channels.slack in workspace/anvio.yaml).'
+	@echo 'Auth / channels:'
+	@echo '  setup-token-claude      Claude Pro/Max OAuth for the claude-code runtime (ADR-009)'
+	@echo '  auth-status             List stored runtime connections'
+	@echo '  gateway                 Start the gateway daemon (channels + worker + API)'
+	@echo '  telegram                Health-check the Telegram adapter'
+	@echo ''
+	@echo 'Telegram and Slack are native Anvio channels (spec.channels in workspace/anvio.yaml).'
+
+# ---------------------------------------------------------- Runtime OAuth + channels
+
+setup-token-claude:
+	@if [ -n "$$ANTHROPIC_API_KEY" ]; then \
+		echo 'ERROR: ANTHROPIC_API_KEY is set — it shadows OAuth and bills API credits. Unset it first.'; exit 1; \
+	fi
+	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio setup-token --claude
+
+auth-status:
+	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio connect list
+
+gateway:
+	@test -f .env || (echo 'Missing .env — cp .env.example .env and fill TELEGRAM_BOT_TOKEN' && exit 1)
+	set -a; . ./.env; set +a; \
+	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio gateway start
+
+telegram:
+	@test -f .env || (echo 'Missing .env — cp .env.example .env and fill TELEGRAM_BOT_TOKEN' && exit 1)
+	set -a; . ./.env; set +a; \
+	test -n "$$TELEGRAM_BOT_TOKEN" || (echo 'TELEGRAM_BOT_TOKEN empty in .env' && exit 1); \
+	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio channels status
 
 # ---------------------------------------------------------- Anvio CLI targets
 

@@ -1,0 +1,20 @@
+# Channel harness defaults.
+#
+# v2.0.2 shipped upstream fixes for silent DM drops (#52) and `engageOn: mention` on Telegram (#51).
+# We keep the harness ON so the Soul-Gate approver flow can gate destructive tools
+# — soulSlug points at our workspace default (tech-lead-soul) instead of the built-in
+# architect-soul that ships with Anvio.
+apiVersion: anvio.io/v1
+kind: HarnessDefaults
+metadata:
+  name: default
+spec:
+  enabled: true
+  soulSlug: tech-lead-soul
+  suppressRawOutput: false
+  idleMinutes: 15
+  resumeSessions: true
+  connectBroker:
+    enabled: true
+    encryptionKeyEnv: ANVIO_CONNECTION_ENCRYPTION_KEY
+    defaultTtlSeconds: 3600

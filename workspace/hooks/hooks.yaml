@@ -1,0 +1,7 @@
+# Lifecycle hooks. Empty by default — Hermes had no equivalent surface.
+apiVersion: anvio.io/v1
+kind: HookConfig
+metadata:
+  name: default
+spec:
+  hooks: []

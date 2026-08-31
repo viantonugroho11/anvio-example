@@ -23,10 +23,11 @@ Anvio is likewise a "local-first, file-first" agent OS whose primitives (`kind: 
 | Session compression | `compression: threshold, target_ratio, protect_last_n` | Anvio's built-in session summarizer (learning-loop) | Implicit; tune via storage provider + learning-loop config |
 | Observability (Langfuse + OTel) | `observability.langfuse`, `observability.opentelemetry` | `@anvio/observability` — Langfuse + OTLP built in | Env vars: `OTEL_EXPORTER_OTLP_ENDPOINT`, `ANVIO_OTEL_ENABLED`, Langfuse via importable dashboard |
 | Reasoning effort / max turns | `agent.max_turns`, `reasoning_effort` | Agent spec fields (per-agent override) | `workspace/agents/<role>.yaml` `spec.maxTurns` / `spec.reasoningEffort` |
-| Telegram channel | Hermes gateway | Native `kind: Channel` `telegram` adapter | `workspace/anvio.yaml` `spec.channels.telegram` + `TELEGRAM_BOT_TOKEN` |
+| Telegram channel | Hermes gateway, per-profile bot tokens (`TELEGRAM_BOT_FE/BE`) | Native `telegram` adapter, long-polling, one bot (ADR-010) | `workspace/anvio.yaml` `spec.channels.telegram` + `TELEGRAM_BOT_TOKEN` |
 | Slack channel (Playwright bridge) | `services/slack-playwright/*.py` (Python UI-automation) | Native `slack` channel adapter (Socket Mode) — **eliminates the Python service** | `spec.channels.slack` + `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` |
 | Webhook (Grafana alerts) | `platforms.webhook.routes.grafana-alerts` | REST inbound + `Automation` trigger, or a custom webhook route | `POST /api/channels/...` or `automation` trigger |
-| Cursor Agent delegation | `scripts/cursor-delegate/delegate.mjs` (@cursor/sdk) | `runtimes.cursor` (`CursorRuntimeProvider`, ACP or `agent -p`) | Agent spec: `runtime: cursor` |
+| Cursor Agent delegation | `scripts/cursor-delegate/delegate.mjs` (@cursor/sdk) | `runtimes.cursor` (`CursorRuntimeProvider`, ACP or `agent -p`) | Agent spec: `runtime.fallbacks: [cursor, local]` |
+| Model auth | `*_API_KEY` per profile in `.env` | Runtime OAuth against Claude Pro/Max subscription (ADR-009) | `anvio setup-token --claude` → `workspace/connections/`; `CLAUDE_CODE_OAUTH_TOKEN` for headless |
 | Bitbucket private repo mount | `docker/.env` `WORKSPACE_HOST_PATH`, `make workspace-clone` | Same host-mount pattern; Anvio has no opinion here | Unchanged |
 | Toolsets (`file`, `web`, `todo`) | Hermes built-ins | Anvio built-in tool gateway (73 tools) | Implicit; filter via `harness/defaults.yaml` `toolSurface` |
 | Facts vs procedures split | `memory/*` MD + `skills/*` MD | Same split enforced by schema (`kind: Memory` vs `kind: Skill`) | Preserved |
@@ -108,7 +109,9 @@ Agent (workspace/agents/<role>.yaml)
    ├── Soul     (workspace/souls/<role>-soul/SOUL.md) — approvers, mandate
    └── Skills   (workspace/skills/<slug>.md, resolved by slug list)
         ↓
-Model provider (DeepSeek by default → providers/routing.yaml)
+Runtime: claude-code (Claude Pro/Max OAuth, ADR-009) → fallbacks: cursor → local
+        ↓
+Model provider — `local` hop only (DeepSeek → providers/routing.yaml)
         ↓
 Tool gateway  (built-ins)  +  MCP bridge  (workspace/mcp/servers.yaml)
         ↓

@@ -18,7 +18,8 @@ spec:
   events:
     provider: local          # single-process default; switch to nats for Level-3
   runtime:
-    default: local           # DeepSeek chat via local runtime; agents may override to `cursor`
+    default: claude-code     # ADR-009: Claude Pro/Max subscription OAuth (`anvio setup-token --claude`)
+                             # Per-agent fallback chains live in agents/*.yaml (spec.runtime.fallbacks).
   execution:
     defaultTimeoutMs: 180000 # matches Hermes terminal.timeout: 180
     networkEnabled: false
@@ -26,10 +27,12 @@ spec:
     encryption: enabled
   channels:
     telegram:
-      enabled: true          # env: TELEGRAM_BOT_TOKEN
+      enabled: true          # long-polling Bot API — no webhook/public URL needed
+      # botToken resolves from TELEGRAM_BOT_TOKEN (.env) — never commit the literal token here.
       defaultAgent: tech-lead
+      # Forum topics map to sessions via message_thread_id; approvals render as inline buttons.
     slack:
-      enabled: true          # Native Socket Mode adapter — replaces Python Playwright bridge
+      enabled: false         # off until SLACK_BOT_TOKEN + SLACK_APP_TOKEN exist (ADR-008 keeps the design)
       defaultAgent: tech-lead
     cli:
       enabled: true

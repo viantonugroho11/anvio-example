@@ -3,14 +3,16 @@
 apiVersion: anvio.io/v1
 kind: Agent
 metadata:
-  slug: qa
+  name: qa
   version: "1.0.0"
 spec:
-  name: QA
+  # display name: QA
   description: QA — test design, automation, validation
   persona: qa
   soul: qa-soul
-  runtime: local
+  runtime:
+    provider: claude-code   # ADR-009: Claude Pro/Max OAuth via `anvio setup-token --claude`
+    fallbacks: [local]        # model provider (routing.yaml) used only on the `local` hop
   skills:
     - test-design
     - automation-testing
@@ -18,7 +20,10 @@ spec:
     - performance-testing
     - tdd
     - feature-development
-  tools:
-    include: ['*']
-  maxTurns: 60
-  reasoningEffort: medium
+  tools: []              # empty = full built-in gateway; list slugs to restrict
+  model:
+    # ClaudeCodeRuntime passes spec.model.model straight to the Claude Agent SDK,
+    # so this MUST be a Claude model id/alias — not the DeepSeek fallback model.
+    provider: anthropic
+    model: sonnet
+    maxTokens: 8192

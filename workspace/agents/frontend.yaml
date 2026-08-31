@@ -3,14 +3,16 @@
 apiVersion: anvio.io/v1
 kind: Agent
 metadata:
-  slug: frontend
+  name: frontend
   version: "1.0.0"
 spec:
-  name: Frontend
+  # display name: Frontend
   description: Frontend engineer — UI, components, accessibility
   persona: frontend
   soul: frontend-soul
-  runtime: local
+  runtime:
+    provider: claude-code   # ADR-009: Claude Pro/Max OAuth via `anvio setup-token --claude`
+    fallbacks: [cursor, local]        # model provider (routing.yaml) used only on the `local` hop
   skills:
     - cursor-delegate
     - cursor-coding
@@ -23,7 +25,10 @@ spec:
     - testing-strategy
     - tdd
     - repo-conventions
-  tools:
-    include: ['*']
-  maxTurns: 70
-  reasoningEffort: medium
+  tools: []              # empty = full built-in gateway; list slugs to restrict
+  model:
+    # ClaudeCodeRuntime passes spec.model.model straight to the Claude Agent SDK,
+    # so this MUST be a Claude model id/alias — not the DeepSeek fallback model.
+    provider: anthropic
+    model: sonnet
+    maxTokens: 8192

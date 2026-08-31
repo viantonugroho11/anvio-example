@@ -27,3 +27,12 @@ venv/
 .vscode/
 .idea/
 *.swp
+
+# Anvio connection broker (encrypted OAuth tokens)
+/workspace/connections/
+/workspace/audit/tokens.jsonl
+/workspace/memory/recall.sqlite
+/workspace/memory/_recall-index.json
+/workspace/memory/local-user.json
+/workspace/memory/telegram:*.json
+/workspace/memory/*/

@@ -4,14 +4,16 @@
 apiVersion: anvio.io/v1
 kind: Agent
 metadata:
-  slug: architect
+  name: architect
   version: "1.0.0"
 spec:
-  name: Architect
+  # display name: Architect
   description: System architect — design, ADRs, scalability and reliability analysis
   persona: architect
   soul: architect-soul
-  runtime: local             # overridable to `cursor` when delegating implementation
+  runtime:
+    provider: claude-code   # ADR-009: Claude Pro/Max OAuth via `anvio setup-token --claude`
+    fallbacks: [local]        # model provider (routing.yaml) used only on the `local` hop
   skills:
     - system-design
     - architecture-review
@@ -27,7 +29,10 @@ spec:
     - semantic-memory
   # Toolsets from Hermes (`file`, `web`, `skills`, `mcp`, `todo`) map to Anvio's
   # default built-in tool gateway plus MCP. No explicit include list = full surface.
-  tools:
-    include: ['*']
-  maxTurns: 60
-  reasoningEffort: high
+  tools: []              # empty = full built-in gateway; list slugs to restrict
+  model:
+    # ClaudeCodeRuntime passes spec.model.model straight to the Claude Agent SDK,
+    # so this MUST be a Claude model id/alias — not the DeepSeek fallback model.
+    provider: anthropic
+    model: sonnet
+    maxTokens: 8192

@@ -11,7 +11,7 @@ and [docs/decision-log.md](docs/decision-log.md).
 ## Architecture
 
 ```
-Telegram / Slack (Playwright bridge) / CLI / REST
+Telegram / Slack / CLI / REST / web-chat
     ↓
 Anvio channel adapter → ChannelHub → Session
     ↓
@@ -20,7 +20,9 @@ Agent (workspace/agents/<role>.yaml)
    ├── Soul    (workspace/souls/<role>-soul/SOUL.md)  — approvers, mandate
    └── Skills  (workspace/skills/<slug>.md)
     ↓
-Model provider (DeepSeek default → workspace/providers/routing.yaml)
+Runtime: claude-code (Claude Pro/Max OAuth) → fallback local
+    ↓
+Model provider — local hop only (DeepSeek → workspace/providers/routing.yaml)
     ↓
 Tool gateway + MCP bridge (workspace/mcp/servers.yaml)
     ↓
@@ -33,12 +35,15 @@ Memory (filesystem SoT + optional Postgres/Qdrant vector index)
 # 1. Install Anvio (once per machine)
 curl -fsSL https://raw.githubusercontent.com/viantonugroho11/Anvio/main/scripts/install.sh | bash
 source ~/.anvio/env
+anvio --version    # need >= v2.0.2 — earlier releases silently drop Telegram DMs (see ADR-015)
 
 # 2. Point Anvio at this workspace
 export ANVIO_WORKSPACE=$PWD/workspace
 make validate      # runs `anvio workspace validate`
 
-# 3. Set your model API key (DeepSeek by default; see providers/routing.yaml)
+# 3. Authenticate the runtime (Claude Pro/Max subscription OAuth — ADR-009)
+make setup-token-claude          # wraps `claude setup-token`; token stored encrypted
+# Fallback model provider for the `local` hop only:
 export DEEPSEEK_API_KEY=sk-...
 
 # 4. List agents / skills / workflows
@@ -114,6 +119,61 @@ make workspace-init
 make workspace-clone REPO=order-tyche BITBUCKET_WORKSPACE=your-workspace
 ```
 
+## Runtime auth — Claude Code OAuth
+
+Agents run on the **`claude-code` runtime**, authenticated against a Claude Pro/Max
+subscription rather than a metered API key (ADR-009). See Anvio's
+[Runtime OAuth](https://anvio-docs.vercel.app/docs/security/runtime-oauth).
+
+```bash
+make setup-token-claude    # → anvio setup-token --claude
+make auth-status           # list stored connections
+```
+
+The token is encrypted by the connection broker under `workspace/connections/`
+(`service: claude-code`). Headless hosts and containers instead set
+`CLAUDE_CODE_OAUTH_TOKEN`.
+
+> **Do not set `ANTHROPIC_API_KEY`** in the same environment. It shadows OAuth and
+> silently bills API credits instead of subscription quota. `make setup-token-claude`
+> refuses to run if it is set.
+
+`spec.model.model` in each agent is a **Claude** id (`sonnet`) — `ClaudeCodeRuntime`
+passes it straight to the Agent SDK, so a DeepSeek model id there fails with
+*"There's an issue with the selected model"*.
+
+Fallback chain per agent: `claude-code → local` (and `→ cursor → local` for
+`backend`, `frontend`, `reviewer`). The `local` hop is the only consumer of
+`workspace/providers/routing.yaml`.
+
+## Telegram
+
+Native long-polling adapter — no webhook, no public URL. Enabled in
+[workspace/anvio.yaml](workspace/anvio.yaml) under `spec.channels.telegram`.
+
+```bash
+cp .env.example .env       # fill TELEGRAM_BOT_TOKEN (from @BotFather)
+make telegram              # health-check: `anvio channels status`
+make gateway               # start the daemon — this is what actually polls Telegram
+```
+
+**Nothing polls Telegram until the gateway daemon runs** — config alone is inert, and
+`anvio gateway start` needs `--foreground` ([Anvio#50](https://github.com/viantonugroho11/Anvio/issues/50)).
+
+Run exactly one instance. `anvio run` / `anvio chat` also start a Telegram poller and
+never stop it ([Anvio#48](https://github.com/viantonugroho11/Anvio/issues/48)); a leftover
+CLI process races the gateway for `getUpdates`, wins some of them, and drops those
+messages — the bot goes silent while `anvio channels status` still reports `healthy`.
+If replies stop, look for stragglers:
+
+```bash
+ps aux | grep 'apps/cli/dist/main.js'   # kill anything that is not the gateway
+```
+
+Default agent is `tech-lead`; mention another role to route to it. Forum topics map
+1:1 to sessions via `message_thread_id`, and tool approvals render as inline
+Approve/Reject buttons backed by the same Soul Gate flow as Slack.
+
 ## Slack
 
 Slack uses Anvio's **native Socket Mode channel adapter** ([packages/channels/slack](https://anvio-docs.vercel.app/docs/channels/adapters)) — no Python bridge, no Playwright. Enabled in [workspace/anvio.yaml](workspace/anvio.yaml) under `spec.channels.slack`.
@@ -165,7 +225,8 @@ anvio-example/
 ├── workspace/                       # THE MIGRATED CONFIG (Anvio workspace)
 │   ├── anvio.yaml                   # workspace-level config
 │   ├── providers/routing.yaml       # DeepSeek default provider
-│   ├── mcp/servers.yaml             # 7 MCP servers (filesystem, atlassian, 5× bitbucket, github, memory)
+│   ├── mcp/servers.yaml             # MCP servers — only filesystem + github enabled;
+│   │                                # the rest need real env (`${VAR}` is NOT expanded)
 │   ├── agents/       (9)            # kind: Agent
 │   ├── personas/     (9)            # kind: Persona
 │   ├── souls/        (9)            # kind: Soul
@@ -173,9 +234,10 @@ anvio-example/
 │   ├── workflows/    (11)           # kind: Workflow (DAGs) — includes planner
 │   └── memory/                      # filesystem memory + ADRs
 ├── docker/                          # compose files (memory, observability, telemetry)
+├── .env.example                     # runtime OAuth + channel tokens (copy to .env)
 ├── docs/
 │   ├── migration.md                 # Phase 2 mapping table + Phase 3 architecture
-│   └── decision-log.md              # ADRs 001..008
+│   └── decision-log.md              # ADRs 001..010
 ├── Makefile                         # `make agents / skills / workflows / chat / run / …`
 └── README.md                        # this file
 ```
@@ -183,7 +245,7 @@ anvio-example/
 ## Documentation
 
 - [docs/migration.md](docs/migration.md) — mapping table Hermes → Anvio + validation strategy
-- [docs/decision-log.md](docs/decision-log.md) — ADR-001..008
+- [docs/decision-log.md](docs/decision-log.md) — ADR-001..010 (009 runtime OAuth, 010 Telegram)
 - Anvio docs — mirrored under [anvio-docs/](anvio-docs/) or online at https://anvio-docs.vercel.app
 
 ## License
