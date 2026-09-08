@@ -264,3 +264,25 @@ The four fixes together mean the workspace no longer needs any of the workaround
 - (+) One less workspace file to maintain (`channel-profiles.yaml`), one file simpler (`defaults.yaml`).
 - (–) The workspace now has a **hard version floor of v2.0.2**. Downgrading Anvio without also re-adding the two workaround files reproduces the silent-drop failures.
 - (–) ADR-013's operating rule ("gateway is the only process allowed to poll a channel") still stands — [Anvio#48](https://github.com/viantonugroho11/Anvio/issues/48) is not part of the v2.0.2 sweep. Running `anvio run` or `anvio chat` against this workspace while the gateway is up will still leak a background poller.
+
+---
+
+## ADR-016 — Enable A2A protocol (v2.4.0)
+
+**Status**: Accepted.
+
+**Context**: Anvio v2.4.0 ships `packages/a2a` — a full A2A v1.0 implementation (ADR-0026). A2A (Agent-to-Agent) is Google's open protocol for cross-platform agent interoperability: agents expose Agent Cards for discovery, exchange Messages via Tasks, and stream results over SSE. The package provides both server (expose Anvio agents to external A2A clients) and client (delegate to external A2A agents via `A2ATool`).
+
+The gateway routes `/a2a/*` and `/.well-known/agent.json` when `platform.a2aServer` is present. Agent Cards are auto-generated from `agents/*.yaml` frontmatter.
+
+**Decision**:
+- Add `spec.a2a.enabled: true` to `workspace/anvio.yaml`.
+- Once upstream wires `createPlatform` to read this config key and instantiate `A2AServer`, the gateway will automatically serve Agent Card discovery and accept A2A JSON-RPC + REST requests.
+- External A2A agents can be added as tools by registering `A2ATool` instances in the workspace tool config.
+
+**Consequences**:
+- (+) Every agent in `workspace/agents/` becomes discoverable via `/.well-known/agent.json` — enables cross-platform orchestration (CrewAI, AutoGen, LangGraph, etc.).
+- (+) `A2ATool` wraps external A2A agents as native Anvio tools — delegation without custom integration code.
+- (+) SSE streaming + push notifications for long-running inter-agent tasks.
+- (–) Config key `spec.a2a.enabled` is forward-looking — `createPlatform` doesn't read it yet in v2.4.0; the gateway routes exist but the boot wiring is manual (programmatic `platform.a2aServer = ...`). This ADR documents the intent; full auto-wiring expected in a future release.
+- (–) Version floor raised to **v2.4.0** for A2A features.

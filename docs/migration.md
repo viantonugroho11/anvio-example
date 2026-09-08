@@ -32,6 +32,7 @@ Anvio is likewise a "local-first, file-first" agent OS whose primitives (`kind: 
 | Toolsets (`file`, `web`, `todo`) | Hermes built-ins | Anvio built-in tool gateway (73 tools) | Implicit; filter via `harness/defaults.yaml` `toolSurface` |
 | Facts vs procedures split | `memory/*` MD + `skills/*` MD | Same split enforced by schema (`kind: Memory` vs `kind: Skill`) | Preserved |
 | Profile isolation (HERMES_HOME) | Per-profile HERMES_HOME | Per-agent workspace scoping | Single workspace; sessions namespaced by agent |
+| Agent-to-Agent (A2A) | N/A (Hermes had no inter-agent protocol) | A2A v1.0 — Agent Cards, JSON-RPC, SSE streaming, push notifications (ADR-016, v2.4.0) | `spec.a2a.enabled: true` in `workspace/anvio.yaml`; `/.well-known/agent.json` + `/a2a/*` on gateway |
 
 ### Concepts with no direct equivalent
 

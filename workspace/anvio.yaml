@@ -40,6 +40,11 @@ spec:
       enabled: true
     web-chat:
       enabled: true
+  a2a:
+    enabled: true            # ADR-0026: A2A protocol — agent-to-agent interoperability (v2.4.0)
+    # Exposes /.well-known/agent.json + /a2a/* on the unified gateway.
+    # Agent Cards auto-generated from agents/*.yaml frontmatter.
+    # External A2A agents can be registered as tools via A2ATool.
   worktrees:
     enabled: true            # cursor delegation clones Bitbucket repos under ../projects
     repoPath: ../projects

@@ -27,6 +27,11 @@ Model provider — local hop only (DeepSeek → workspace/providers/routing.yaml
 Tool gateway + MCP bridge (workspace/mcp/servers.yaml)
     ↓
 Memory (filesystem SoT + optional Postgres/Qdrant vector index)
+
+A2A (v2.4.0):
+    /.well-known/agent.json  →  Agent Card discovery
+    /a2a/*                   →  JSON-RPC 2.0 + REST + SSE streaming
+    A2ATool                  →  delegate to external A2A agents as tools
 ```
 
 ## Quick start
@@ -35,7 +40,7 @@ Memory (filesystem SoT + optional Postgres/Qdrant vector index)
 # 1. Install Anvio (once per machine)
 curl -fsSL https://raw.githubusercontent.com/viantonugroho11/Anvio/main/scripts/install.sh | bash
 source ~/.anvio/env
-anvio --version    # need >= v2.0.2 — earlier releases silently drop Telegram DMs (see ADR-015)
+anvio --version    # need >= v2.4.0 — earlier releases miss A2A, slash-command sanitization, etc.
 
 # 2. Point Anvio at this workspace
 export ANVIO_WORKSPACE=$PWD/workspace
@@ -188,6 +193,35 @@ Slack `thread_ts` maps 1:1 to an Anvio session; approvals render as Block Kit bu
 Requires Socket Mode enabled in the Slack app + subscriptions to `message.channels`,
 `message.im`, `message.groups`.
 
+## A2A — Agent-to-Agent protocol (v2.4.0)
+
+Anvio v2.4.0 implements [Google's A2A protocol v1.0](https://a2a-protocol.org/latest/)
+for cross-platform agent interoperability (ADR-016, upstream ADR-0026). Enabled in
+`workspace/anvio.yaml` under `spec.a2a.enabled: true`.
+
+**Server** — exposes all workspace agents via Agent Cards at `/.well-known/agent.json`.
+External A2A clients (CrewAI, AutoGen, LangGraph, etc.) can discover and interact with
+your agents via JSON-RPC 2.0 or REST + SSE streaming on `/a2a/*`.
+
+**Client** — `A2ATool` wraps any external A2A agent as a native Anvio tool. Register
+the remote agent's URL and your agents can delegate tasks to it transparently.
+
+Key routes (on the Unified Gateway):
+
+| Route | Description |
+|---|---|
+| `/.well-known/agent.json` | Agent Card discovery |
+| `/a2a` | JSON-RPC 2.0 endpoint |
+| `/a2a/messages` | REST: send message |
+| `/a2a/messages:stream` | REST: send message with SSE |
+| `/a2a/tasks/:id` | REST: get/cancel task |
+| `/a2a/tasks/:id:subscribe` | SSE: subscribe to task updates |
+
+> **Note**: `createPlatform` doesn't auto-wire `a2aServer` yet in v2.4.0 — the config
+> key is forward-looking. Full auto-wiring expected in a future release. See the
+> [A2A integration guide](https://github.com/viantonugroho11/Anvio/blob/main/docs/78-a2a-protocol.md)
+> for programmatic setup.
+
 ## Semantic memory
 
 `memory/` (Markdown) is the source of truth. It is indexed into
@@ -245,7 +279,7 @@ anvio-example/
 ## Documentation
 
 - [docs/migration.md](docs/migration.md) — mapping table Hermes → Anvio + validation strategy
-- [docs/decision-log.md](docs/decision-log.md) — ADR-001..010 (009 runtime OAuth, 010 Telegram)
+- [docs/decision-log.md](docs/decision-log.md) — ADR-001..016 (009 OAuth, 010 Telegram, 015 v2.0.2 upgrade, 016 A2A)
 - Anvio docs — mirrored under [anvio-docs/](anvio-docs/) or online at https://anvio-docs.vercel.app
 
 ## License
