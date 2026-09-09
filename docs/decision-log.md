@@ -285,4 +285,4 @@ The gateway routes `/a2a/*` and `/.well-known/agent.json` when `platform.a2aServ
 - (+) `A2ATool` wraps external A2A agents as native Anvio tools — delegation without custom integration code.
 - (+) SSE streaming + push notifications for long-running inter-agent tasks.
 - (–) Config key `spec.a2a.enabled` is forward-looking — `createPlatform` doesn't read it yet in v2.4.0; the gateway routes exist but the boot wiring is manual (programmatic `platform.a2aServer = ...`). This ADR documents the intent; full auto-wiring expected in a future release.
-- (–) Version floor raised to **v2.4.0** for A2A features.
+- (–) Version floor raised to **v2.5.0** for A2A features (v2.5.0 migrates to official `@a2a-js/sdk` v1.1.0 with protobuf types and SDK transport handlers).

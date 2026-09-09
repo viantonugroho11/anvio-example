@@ -40,7 +40,7 @@ A2A (v2.4.0):
 # 1. Install Anvio (once per machine)
 curl -fsSL https://raw.githubusercontent.com/viantonugroho11/Anvio/main/scripts/install.sh | bash
 source ~/.anvio/env
-anvio --version    # need >= v2.4.0 — earlier releases miss A2A, slash-command sanitization, etc.
+anvio --version    # need >= v2.5.0 — A2A on official SDK, slash-command sanitization, etc.
 
 # 2. Point Anvio at this workspace
 export ANVIO_WORKSPACE=$PWD/workspace
@@ -193,11 +193,13 @@ Slack `thread_ts` maps 1:1 to an Anvio session; approvals render as Block Kit bu
 Requires Socket Mode enabled in the Slack app + subscriptions to `message.channels`,
 `message.im`, `message.groups`.
 
-## A2A — Agent-to-Agent protocol (v2.4.0)
+## A2A — Agent-to-Agent protocol (v2.5.0)
 
-Anvio v2.4.0 implements [Google's A2A protocol v1.0](https://a2a-protocol.org/latest/)
-for cross-platform agent interoperability (ADR-016, upstream ADR-0026). Enabled in
-`workspace/anvio.yaml` under `spec.a2a.enabled: true`.
+Anvio implements [Google's A2A protocol v1.0](https://a2a-protocol.org/latest/)
+for cross-platform agent interoperability (ADR-016, upstream ADR-0026). Since v2.5.0,
+backed by the official [`@a2a-js/sdk` v1.1.0](https://github.com/nichochar/a2a-js) —
+protobuf-generated types, SDK transport handlers, and `AnvioAgentExecutor` bridging to
+the Anvio runtime. Enabled in `workspace/anvio.yaml` under `spec.a2a.enabled: true`.
 
 **Server** — exposes all workspace agents via Agent Cards at `/.well-known/agent.json`.
 External A2A clients (CrewAI, AutoGen, LangGraph, etc.) can discover and interact with
@@ -217,8 +219,8 @@ Key routes (on the Unified Gateway):
 | `/a2a/tasks/:id` | REST: get/cancel task |
 | `/a2a/tasks/:id:subscribe` | SSE: subscribe to task updates |
 
-> **Note**: `createPlatform` doesn't auto-wire `a2aServer` yet in v2.4.0 — the config
-> key is forward-looking. Full auto-wiring expected in a future release. See the
+> **Note**: `createPlatform` doesn't auto-wire `a2aServer` yet — the config key is
+> forward-looking. See the
 > [A2A integration guide](https://github.com/viantonugroho11/Anvio/blob/main/docs/78-a2a-protocol.md)
 > for programmatic setup.
 
