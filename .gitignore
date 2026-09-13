@@ -21,6 +21,8 @@ venv/
 /workspace/souls/_cache/
 /workspace/skills/_drafts/
 /workspace/skills/_installed/
+/workspace/.gateway/
+/workspace/logs/
 
 # Editor / OS
 .DS_Store
