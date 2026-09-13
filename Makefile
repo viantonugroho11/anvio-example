@@ -44,48 +44,48 @@ setup-token-claude:
 	@if [ -n "$$ANTHROPIC_API_KEY" ]; then \
 		echo 'ERROR: ANTHROPIC_API_KEY is set — it shadows OAuth and bills API credits. Unset it first.'; exit 1; \
 	fi
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio setup-token --claude
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio setup-token --claude
 
 auth-status:
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio connect list
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio connect list
 
 gateway:
 	@test -f .env || (echo 'Missing .env — cp .env.example .env and fill TELEGRAM_BOT_TOKEN' && exit 1)
 	set -a; . ./.env; set +a; \
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio gateway start
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio gateway start
 
 telegram:
 	@test -f .env || (echo 'Missing .env — cp .env.example .env and fill TELEGRAM_BOT_TOKEN' && exit 1)
 	set -a; . ./.env; set +a; \
 	test -n "$$TELEGRAM_BOT_TOKEN" || (echo 'TELEGRAM_BOT_TOKEN empty in .env' && exit 1); \
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio channels status
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio channels status
 
 # ---------------------------------------------------------- Anvio CLI targets
 
 init:
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio workspace validate || \
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio workspace validate || \
 		{ echo 'Run: anvio init $(ANVIO_WORKSPACE) — or install: curl -fsSL https://raw.githubusercontent.com/viantonugroho11/Anvio/main/scripts/install.sh | bash'; exit 1; }
 
 validate:
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio workspace validate
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio workspace validate
 
 agents:
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio agents list
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio agents list
 
 skills:
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio skill list
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio skill list
 
 workflows:
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio workflow list
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio workflow list
 
 chat:
 	@test -n "$(AGENT)" || (echo 'Usage: make chat AGENT=architect' && exit 1)
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio chat --agent $(AGENT)
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio chat --agent $(AGENT)
 
 run:
 	@test -n "$(AGENT)" || (echo 'Usage: make run AGENT=architect Q="your prompt"' && exit 1)
 	@test -n "$(Q)" || (echo 'Usage: make run AGENT=architect Q="your prompt"' && exit 1)
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio run $(AGENT) "$(Q)"
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio run $(AGENT) "$(Q)"
 
 # ---------------------------------------------------------- Memory (PGVector)
 
@@ -96,12 +96,12 @@ memory-down:
 	docker compose -f $(COMPOSE_MEMORY) down
 
 memory-index:
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio memory index || \
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio memory index || \
 		docker compose -f $(COMPOSE_MEMORY) run --rm memory-indexer
 
 memory-search:
 	@test -n "$(Q)" || (echo 'Usage: make memory-search Q="your query"' && exit 1)
-	ANVIO_WORKSPACE=$(ANVIO_WORKSPACE) anvio memory search "$(Q)" --json || \
+	ANVIO_WORKSPACE="$(ANVIO_WORKSPACE)" anvio memory search "$(Q)" --json || \
 		( cd $(COMPOSE_DIR) && set -a && [ -f telemetry.env ] && . ./telemetry.env; set +a; \
 		  MEMORY_DATABASE_URL=$${MEMORY_DATABASE_URL:-postgresql://hermes:hermes_memory_dev@localhost:5433/hermes_memory} \
 		  python3 ../scripts/search_memory.py "$(Q)" --json )
